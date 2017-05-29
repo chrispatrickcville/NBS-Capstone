@@ -43,7 +43,7 @@ email_end <- ifelse(email_test == 'Y', 1, nrow(emails))
 for (i in 1:email_end) {
   attachments <- paste(path, slash, list.files(path, 
                                   pattern=paste0(emails$Name[i], "*")), sep="")
-  if(!is.list(attachments) && attachments == path) next
+  if(!is.list(attachments) && !grepl("pdf", attachments)) next
   recipients <- ifelse(email_test == 'Y', test_email_recipient, emails$Email[i])
   sendEmail(recipients, subject, message, attachments)
 }
