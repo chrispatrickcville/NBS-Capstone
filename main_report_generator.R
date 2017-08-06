@@ -3,12 +3,12 @@
 # IF YOU RUN THAT FILE, IT WILL ALLOW YOU TO SET YOUR FILE LOCATIONS
 # AND ALSO RUN THIS FILE.
 
-# If user has entered something other than "H" or "BC" for 
-# report_type and is not running the summary report, stop the
-# file and report an error
-if (report_type != "H" & report_type != "BC" & !exists("summary_report")) {
-  stop(sprintf("You entered '%s' for the report_type variable. Please change the value for this variable to either 'H' to run reports for hospitals or 'BC' to run reports for birthcenters.",
-               report_type))
+# Set value for filt_col based on whether the summary
+# report is being run. Default is 'RECEIVEDATE'.
+if (exists("summary_report") & exists("summary_filter")) {
+  filt_col <- summary_filter
+} else {
+  filt_col <- 'RECEIVEDATE'
 }
 
 # source load_packages file
@@ -22,8 +22,14 @@ unsats <- read.csv(paste(codes_path, slash, "unsat_codes.csv", sep=""))
 messages <- read.csv(paste(codes_path, slash, "organization_messages.csv", sep=""), stringsAsFactors = FALSE)
 messages <- messages[!is.na(messages$Message),]
 
+# Check for correct columns
+col_check(sample_data_path, "sample")
+
 # read in sample data and reformat COLLECTIONDATE and BIRTHDATE as dates
-initial_dd_prep <- read_data(sample_data_path, "COLLECTIONDATE", "BIRTHDATE")
+initial_dd_prep <- read_data(sample_data_path, "COLLECTIONDATE", "RECEIVEDATE", "BIRTHDATE")
+
+# Check that range of filt_col column dates overlaps the requested start and end date
+date_comp_check(initial_dd_prep, "sample")
 
 # join initial_dd with submitter file on submitter ID
 initial_dd <- left_join(initial_dd_prep, submitters, by="SUBMITTERID")
@@ -32,6 +38,20 @@ initial_dd <- left_join(initial_dd_prep, submitters, by="SUBMITTERID")
 temp_sample_dfs <- create_filt_dfs(initial_dd, type="sample")
 dd <- as.data.frame(temp_sample_dfs[1])
 year_dd <- as.data.frame(temp_sample_dfs[2])
+
+# Check to ensure that there is a full year of data (so that the plots
+# on the report cards will be fully realized)
+if (!exists("summary_report")) {
+  
+  # Set year_check to be TRUE
+  year_check <- TRUE
+  
+  # Perform date test
+  date_comp_check(year_dd, "sample")
+  
+  # Remove year_check
+  rm(year_check)
+}
 
 # output report of all submitters not in VA NBS Report Card Organization Names, 
 # with a count of samples, for determining if any submitters need to be
@@ -63,17 +83,29 @@ if (exists("summary_report") | report_type == "H") {
   dd_h <- filter(dd, TYPE == "Hospital")
   year_dd_h <- filter(year_dd, TYPE == "Hospital")
   
-  # create data frame of required metrics for each submitter
-  org_metrics_hosp <- get_org_metrics(dd_h)
-  org_metrics_h <- as.data.frame(org_metrics_hosp[1], check.names=FALSE)
+  # Continue if number of rows in dd_h is greater than 0
+  if (nrow(dd_h) > 0) {
   
-  # get state metrics, AVERAGED OVER HOSPTIALS (rather than samples)
+    # create data frame of required metrics for each submitter
+    org_metrics_hosp <- get_org_metrics(dd_h)
+    org_metrics_h <- as.data.frame(org_metrics_hosp[1], check.names=FALSE)
     
-  # determine number of hospitals
-  tot_sub_h <-  nrow(org_metrics_h)
+    # get state metrics, AVERAGED OVER HOSPTIALS (rather than samples)
+      
+    # determine number of hospitals
+    tot_sub_h <-  nrow(org_metrics_h)
+      
+    # create metrics for state
+    state_h <- get_state_metrics_over_orgs(org_metrics_h, transfused=TRUE)
     
-  # create metrics for state
-  state_h <- get_state_metrics_over_orgs(org_metrics_h, transfused=TRUE)
+  # Stop report if there is no data for hospitals and the user is trying to 
+  # generate report cards for hospitals
+  } else if (!exists("summary_report")) {
+    
+    cat("\nERROR: There is no sample data for hospitals for the requested\ntime period, so report cards cannot be run.\n")
+    stopQuietly()
+  
+  }
   
 }
 
@@ -86,25 +118,50 @@ if (exists("summary_report") | report_type == "BC") {
   dd_bc <- filter(dd, TYPE == "BirthCenter")
   year_dd_bc <- filter(year_dd, TYPE == "BirthCenter")
   
-  # create data frame of required metrics for each submitter
-  org_metrics_birthcenter <- get_org_metrics(dd_bc)
-  org_metrics_bc <- as.data.frame(org_metrics_birthcenter[1], check.names=FALSE)
+  # Continue if number of rows in dd_bc is greater than 0
+  if (nrow(dd_bc) > 0) {
   
-  # Create state metrics based on ALL SAMPLES
-  state_bc <- get_state_metrics_over_samples(dd, transfused=TRUE)
+    # create data frame of required metrics for each submitter
+    org_metrics_birthcenter <- get_org_metrics(dd_bc)
+    org_metrics_bc <- as.data.frame(org_metrics_birthcenter[1], check.names=FALSE)
   
-  # Get summary statistics for state for each period for use in birthcenter plots across ALL SAMPLES
-  state_plot_bc <- year_dd %>%
-    group_by(PERIOD) %>%
-    dplyr::summarise(
-      total_samples = n(),   
-      percent_rec_in_2_days = round(sum(TRANSIT_TIME <= 2 & TRANSIT_TIME >= cutoff, na.rm=TRUE)/
-                                      sum(!is.na(TRANSIT_TIME) & TRANSIT_TIME >= cutoff) * 100, 2),
-      unsat_count = sum(!is.na(UNSATCODE)),
-      unsat_percent = round(unsat_count/total_samples * 100, 2)
-    )
-  state_plot_bc$SUBMITTERNAME <- 'State'
+    # Create state metrics based on ALL SAMPLES
+    state_bc <- get_state_metrics_over_samples(dd, transfused=TRUE)
+    
+    # Get summary statistics for state for each period for use in birthcenter plots across ALL SAMPLES
+    state_plot_bc <- year_dd %>%
+      group_by(PERIOD) %>%
+      dplyr::summarise(
+        total_samples = n(),   
+        percent_rec_in_2_days = round(sum(TRANSIT_TIME <= 2 & TRANSIT_TIME >= cutoff, na.rm=TRUE)/
+                                        sum(!is.na(TRANSIT_TIME) & TRANSIT_TIME >= cutoff) * 100, 2),
+        unsat_count = sum(!is.na(UNSATCODE)),
+        unsat_percent = round(unsat_count/total_samples * 100, 2)
+      )
+    state_plot_bc$SUBMITTERNAME <- 'State'
+  
+  # Stop report if there is no data for BirthCenters and the user is trying to 
+  # generate report cards for BirthCenters
+  } else if (!exists("summary_report")) {
+    
+    cat("\nERROR: There is no sample data for birthcenters for the requested\ntime period, so report cards cannot be run.\n")
+    stopQuietly()
+    
+  }
 
+}
+
+# Stop reporting if user is running summary reports but no
+# data exists for either hospitals or birthcenters
+if (exists("summary_report")) {
+  
+  if (nrow(dd_h) == 0 & nrow(dd_bc) == 0) {
+  
+  cat("\nERROR: There is no sample data for birthcenters or hospitals for\nthe requested time period, so summary reports cannot be created.\n")
+  stopQuietly()
+  
+  }
+  
 }
 
 #######################################################
