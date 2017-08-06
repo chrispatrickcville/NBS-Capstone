@@ -30,20 +30,59 @@ if (send_to == "H") {
   path <- center_path
 }
 
+
 # remove rows with no email addresses
 emails <- emails[emails$Email != "",]
 
 # set 'email_end' to 1 if user is testing email functionality
 # so only a single email is sent, which will have the report
-# for the first organization in the list (organized alphabetically)
+# for the first hospital in the list (organized alphabetically)
 email_end <- ifelse(email_test == 'Y', 1, nrow(emails))
+
+# request email information from user
+emailInfo <- requestEmail()
 
 # loop through organizations, adding attachments that match their names,
 # and send email to each set of receipients for the organization
 for (i in 1:email_end) {
-  attachments <- paste(path, slash, list.files(path, 
-                                  pattern=paste0(emails$Name[i], "*")), sep="")
-  if(!is.list(attachments) && !grepl("pdf", attachments)) next
-  recipients <- ifelse(email_test == 'Y', test_email_recipient, emails$Email[i])
-  sendEmail(recipients, subject, message, attachments)
+  
+  # Get list of attachments for each organization, and send email if any attachments exist
+  attachments <- paste(path, slash, list.files(path, pattern=paste0(emails$Name[i], "*")), 
+                       sep="")
+  if(!is.list(attachments) &&!grepl("pdf", attachments)) next
+  
+  # Get list of recipients for each organization
+  recipients <- unlist(ifelse(email_test == 'Y', 
+                              test_email_recipient, strsplit(emails$Email[i], ";")))
+  
+  # If password is provided, send email with authentication
+  if (length(emailInfo) == 2) {
+    send.mail(from = emailInfo[[1]],
+              to = recipients,
+              subject = subject,
+              body = message,
+              smtp = list(host.name = "csmtp.cov.virginia.gov", 
+                          port = 25,
+                          user.name = emailInfo[[1]],           
+                          passwd = emailInfo[[2]]),            
+              authenticate = TRUE,
+              attach.files = attachments,
+              send = TRUE)
+    
+    # Otherwise, do not require authentication  
+  } else {
+    send.mail(from = emailInfo[[1]],
+              to = recipients,
+              subject = subject,
+              body = message,
+              smtp = list(host.name = "csmtp.cov.virginia.gov", 
+                          port = 25,
+                          user.name = emailInfo[[1]]),
+              authenticate = FALSE,
+              attach.files = attachments,
+              send = TRUE)
+  }
 }
+
+# Remove user's email address and password from environment
+rm(emailInfo)
