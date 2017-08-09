@@ -597,7 +597,7 @@ get_state_metrics_over_samples <- function(df, transfused) {
   
 }
 
-get_state_metrics_over_orgs <- function(df, transfused) {
+get_state_metrics_over_orgs <- function(df, tot_orgs, transfused) {
   
   # Get state metrics averaged over organizations (e.g., hospital or birthcenter). 
   # Takes dataframe of summarized data for each organization and transfused = 
@@ -613,7 +613,7 @@ get_state_metrics_over_orgs <- function(df, transfused) {
       rec_in_2_days = sum(rec_in_2_days, na.rm=TRUE),
       percent_rec_in_2_days = round(mean(percent_rec_in_2_days, na.rm=TRUE), 2),
       met_goal = sum(met_goal, na.rm=TRUE),
-      percent_met_goal = round((met_goal / tot_sub_h) * 100, 2),
+      percent_met_goal = round((met_goal / tot_orgs) * 100, 2),
       col_less_than_24_hours = sum(col_less_than_24_hours, na.rm=TRUE),
       percent_less_than_24_hours = round(mean(percent_less_than_24_hours, na.rm=TRUE), 2),
       trans = sum(trans, na.rm=TRUE),
