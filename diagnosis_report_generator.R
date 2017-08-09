@@ -63,12 +63,6 @@ if (!exists("summary_report")) {
     
     for (submitter in diagnoses$SUBMITTERNAME) {
       
-      # Subset dataframe
-      diag_sub = as.data.frame(diagnoses[diagnoses$SUBMITTERNAME == submitter, 2:4])
-      
-      # Change spacing for last row
-      diag_sub$Description[nrow(diag_sub)] <- gsub("\\\\\\n", "", diag_sub$Description[nrow(diag_sub)])
-      
       # Create report
       rmarkdown::render(input = render_file_diag, 
                         output_format = "pdf_document",
