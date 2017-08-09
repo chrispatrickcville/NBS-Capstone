@@ -26,18 +26,13 @@ messages <- messages[!is.na(messages$Message),]
 col_check(sample_data_path, "sample")
 
 # read in sample data and reformat COLLECTIONDATE and BIRTHDATE as dates
-initial_dd_prep <- read_data(sample_data_path, "COLLECTIONDATE", "RECEIVEDATE", "BIRTHDATE")
+initial_dd_prep <- read_data(sample_data_path, "sample", "COLLECTIONDATE", "RECEIVEDATE", "BIRTHDATE")
 
 # Check that range of filt_col column dates overlaps the requested start and end date
 date_comp_check(initial_dd_prep, "sample")
 
 # join initial_dd with submitter file on submitter ID
 initial_dd <- left_join(initial_dd_prep, submitters, by="SUBMITTERID")
-
-# create dataframes from initial_dd, filtered on start date and end date
-temp_sample_dfs <- create_filt_dfs(initial_dd, type="sample")
-dd <- as.data.frame(temp_sample_dfs[1])
-year_dd <- as.data.frame(temp_sample_dfs[2])
 
 # Check to ensure that there is a full year of data (so that the plots
 # on the report cards will be fully realized)
@@ -47,11 +42,16 @@ if (!exists("summary_report")) {
   year_check <- TRUE
   
   # Perform date test
-  date_comp_check(year_dd, "sample")
+  date_comp_check(initial_dd, "sample")
   
   # Remove year_check
   rm(year_check)
 }
+
+# create dataframes from initial_dd, filtered on start date and end date
+temp_sample_dfs <- create_filt_dfs(initial_dd, type="sample")
+dd <- as.data.frame(temp_sample_dfs[1])
+year_dd <- as.data.frame(temp_sample_dfs[2])
 
 # output report of all submitters not in VA NBS Report Card Organization Names, 
 # with a count of samples, for determining if any submitters need to be
@@ -73,6 +73,12 @@ cutoff <- 1/6
 dd$SUBMITTERNAME <- dd$HOSPITALREPORT
 year_dd$SUBMITTERNAME <- year_dd$HOSPITALREPORT
 
+# get unique records (need to do this here as there may
+# have been multiple values for SUBMITTERNAME for a single
+# sample, and this will be fixed here)
+dd <- unique(dd)
+year_dd <- unique(year_dd)
+
 ################
 
 # If report_type is "H" (hospital) OR if the summary_report variable exists (indicating we are running
@@ -85,26 +91,26 @@ if (exists("summary_report") | report_type == "H") {
   
   # Continue if number of rows in dd_h is greater than 0
   if (nrow(dd_h) > 0) {
-  
+    
     # create data frame of required metrics for each submitter
     org_metrics_hosp <- get_org_metrics(dd_h)
     org_metrics_h <- as.data.frame(org_metrics_hosp[1], check.names=FALSE)
     
     # get state metrics, AVERAGED OVER HOSPTIALS (rather than samples)
-      
+    
     # determine number of hospitals
     tot_sub_h <-  nrow(org_metrics_h)
-      
+    
     # create metrics for state
     state_h <- get_state_metrics_over_orgs(org_metrics_h, transfused=TRUE)
     
-  # Stop report if there is no data for hospitals and the user is trying to 
-  # generate report cards for hospitals
+    # Stop report if there is no data for hospitals and the user is trying to 
+    # generate report cards for hospitals
   } else if (!exists("summary_report")) {
     
     cat("\nERROR: There is no sample data for hospitals for the requested\ntime period, so report cards cannot be run.\n")
     stopQuietly()
-  
+    
   }
   
 }
@@ -120,11 +126,11 @@ if (exists("summary_report") | report_type == "BC") {
   
   # Continue if number of rows in dd_bc is greater than 0
   if (nrow(dd_bc) > 0) {
-  
+    
     # create data frame of required metrics for each submitter
     org_metrics_birthcenter <- get_org_metrics(dd_bc)
     org_metrics_bc <- as.data.frame(org_metrics_birthcenter[1], check.names=FALSE)
-  
+    
     # Create state metrics based on ALL SAMPLES
     state_bc <- get_state_metrics_over_samples(dd, transfused=TRUE)
     
@@ -139,16 +145,16 @@ if (exists("summary_report") | report_type == "BC") {
         unsat_percent = round(unsat_count/total_samples * 100, 2)
       )
     state_plot_bc$SUBMITTERNAME <- 'State'
-  
-  # Stop report if there is no data for BirthCenters and the user is trying to 
-  # generate report cards for BirthCenters
+    
+    # Stop report if there is no data for BirthCenters and the user is trying to 
+    # generate report cards for BirthCenters
   } else if (!exists("summary_report")) {
     
     cat("\nERROR: There is no sample data for birthcenters for the requested\ntime period, so report cards cannot be run.\n")
     stopQuietly()
     
   }
-
+  
 }
 
 # Stop reporting if user is running summary reports but no
@@ -156,10 +162,10 @@ if (exists("summary_report") | report_type == "BC") {
 if (exists("summary_report")) {
   
   if (nrow(dd_h) == 0 & nrow(dd_bc) == 0) {
-  
-  cat("\nERROR: There is no sample data for birthcenters or hospitals for\nthe requested time period, so summary reports cannot be created.\n")
-  stopQuietly()
-  
+    
+    cat("\nERROR: There is no sample data for birthcenters or hospitals for\nthe requested time period, so summary reports cannot be created.\n")
+    stopQuietly()
+    
   }
   
 }
@@ -256,19 +262,19 @@ if (!exists("summary_report")) {
   # Change org metrics to include only a single submitter (if we are only testing the functionality 
   # rather than running all reports)
   if (test_report == "Y") org_metrics = org_metrics[1,]
-
+  
   # Change org metrics to include only the submitters indicated if only_run is not NULL
   if (!is.null(only_run)) org_metrics = filter(org_metrics, SUBMITTERNAME %in% only_run)
-
+  
   # Generate report for each organization
   render_file <- paste0(wd, slash, markdown_file)
-
+  
   for (submitter in org_metrics$SUBMITTERNAME){
     suppressWarnings(rmarkdown::render(input = render_file, 
-                      output_format = "pdf_document",
-                      output_file = paste(submitter, "_", start_date, "_", 
-                                          end_date, ".pdf", sep=''),
-                      output_dir = output))
+                                       output_format = "pdf_document",
+                                       output_file = paste(submitter, "_", start_date, "_", 
+                                                           end_date, ".pdf", sep=''),
+                                       output_dir = output))
   }
   
 }
