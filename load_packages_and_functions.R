@@ -139,7 +139,7 @@ date_repair <- function(df, ...) {
 }
 
 # Identify columns we need to have for sample data
-sample_cols = c("SAMPLEID", "LINKID", "BIRTHDATE", "BIRTHTIME", "COLLECTIONDATE", 
+sample_cols = c("SAMPLEID", "BIRTHDATE", "BIRTHTIME", "COLLECTIONDATE", 
                 "COLLECTIONTIME", "RECEIVEDATE", "TRANSIT_TIME", "TRANSFUSED", "SUBMITTERID", 
                 "SUBMITTERNAME", "UNSATCODE", "CATEGORY")
 
@@ -386,7 +386,9 @@ read_data <- function(folder, data_type, ...) {
   if (!is.null(initial_dd$CATEGORY)) {initial_dd <- initial_dd[!(initial_dd$CATEGORY %in% remove_cats),]}
   
   # Remove CATEGORY column (no longer needed)
-  initial_dd <- subset(initial_dd, select=-CATEGORY)
+  if (data_type == "sample") {
+    initial_dd <- subset(initial_dd, select=-CATEGORY)
+  }
   
   # Remove any duplicate rows
   initial_dd <- unique(initial_dd)
