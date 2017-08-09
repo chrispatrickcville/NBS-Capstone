@@ -59,8 +59,6 @@ stopQuietly <- function(...) {
   
 } 
 
-?rm
-
 check_inf <- function(FUN) {
   
   # returns the value of the function if not infinite, otherwise returns NA
@@ -140,6 +138,14 @@ date_repair <- function(df, ...) {
   
 }
 
+# Identify columns we need to have for sample data
+sample_cols = c("SAMPLEID", "LINKID", "BIRTHDATE", "BIRTHTIME", "COLLECTIONDATE", 
+                "COLLECTIONTIME", "RECEIVEDATE", "TRANSIT_TIME", "TRANSFUSED", "SUBMITTERID", 
+                "SUBMITTERNAME", "UNSATCODE", "CATEGORY")
+
+# Identify columns we need for diagnosis data
+diagnosis_cols <- c("SAMPLEID", "DIAGNOSIS", "DIAGNOSISDATE", "SUBMITTERID", "LINKID")
+
 col_check <- function(folder, type) {
   
   # Checks that a given list of files have the correct columns, returns
@@ -156,11 +162,9 @@ col_check <- function(folder, type) {
   bad_files = c()
   
   if (type == "sample") {
-    cols = c("SAMPLEID", "LINKID", "BIRTHDATE", "BIRTHTIME", "COLLECTIONDATE", 
-             "COLLECTIONTIME", "RECEIVEDATE", "TRANSIT_TIME", "TRANSFUSED", "SUBMITTERID", 
-             "SUBMITTERNAME", "UNSATCODE", "CATEGORY")
+    cols = sample_cols
   } else if (type == "diagnosis") {
-    cols = c("SAMPLEID", "DIAGNOSIS", "DIAGNOSISDATE", "SUBMITTERID", "LINKID")
+    cols = diagnosis_cols
   }
   
   for (f in temp) {
@@ -199,10 +203,10 @@ get_dates <- function(df, data_type) {
   
   date_col <- ifelse(data_type == "sample", filt_col, "DIAGNOSISDATE")
   
-  # Add the minimum date in the date_col to the list of date minimums
+  # Get the earliest date from date_col
   min_date = min(df[, date_col], na.rm = TRUE)
   
-  # Add the maximum date in the date_col to the list of date maximums
+  # Get the latest date from date_col
   max_date = max(df[, date_col], na.rm = TRUE)
   
   return(list(min_date, max_date))
@@ -282,14 +286,19 @@ date_comp_check <- function(df, data_type) {
   # Get minimum and maximum dates for filter column in df
   date_test <- get_dates(df, data_type)
   
-  # Check that earliest date for filt_col in data is earlier than requested start_date
-  date_compare(data_type, "start", date_test)
-  
-  # Check that latest date for filt_col in data is later than requested end_date
-  date_compare(data_type, "end", date_test)
-  
-  # Perform check on year of data if year_check exists (defined in main_report_generator)
-  if (exists("year_check")) {
+  # Perform check of start date and end date (if "year_check" does not exist)
+  if (!exists("year_check")) {
+    
+    # Check that earliest date for filt_col in data is earlier than requested start_date
+    date_compare(data_type, "start", date_test)
+    
+    # Check that latest date for filt_col in data is later than requested end_date
+    date_compare(data_type, "end", date_test)
+    
+  } else {
+    
+    # Otherwise, test that there is one year of data for supporting the
+    # report card visualizations
     
     comp_s <- as.Date(date_test[1][[1]]) 
     
@@ -315,7 +324,7 @@ date_comp_check <- function(df, data_type) {
   
 }
 
-read_data <- function(folder, ...) {
+read_data <- function(folder, data_type, ...) {
   
   # Returns dataframe of data. Optional arguments are columns to be reformatted as dates
   # (for use with csv and txt files).
@@ -347,6 +356,14 @@ read_data <- function(folder, ...) {
   # Strip odd characters from column names
   colnames(initial_dd) <- gsub("ï..", "", colnames(initial_dd))
   
+  # Remove unneeded columns
+  if (data_type == "sample") {
+    cols = sample_cols
+  } else if (data_type == "diagnosis") {
+    cols = diagnosis_cols
+  }
+  initial_dd <- subset(initial_dd, select=cols)
+  
   # Reformat and repair any specified columns as dates
   if (length(date_cols) > 0) {
     initial_dd <- date_reformat(initial_dd, date_cols)
@@ -367,6 +384,9 @@ read_data <- function(folder, ...) {
   # "Treatment", or "Treatment - PKU"
   remove_cats <- c("Proficiency","Treatment","Treatment - PKU")
   if (!is.null(initial_dd$CATEGORY)) {initial_dd <- initial_dd[!(initial_dd$CATEGORY %in% remove_cats),]}
+  
+  # Remove CATEGORY column (no longer needed)
+  initial_dd <- subset(initial_dd, select=-CATEGORY)
   
   # Remove any duplicate rows
   initial_dd <- unique(initial_dd)
@@ -653,6 +673,14 @@ if (!all(levels(submitters$TYPE) %in% c("Hospital", "BirthCenter"))) {
   
   {stop(sprintf("The 'VA NBS Report Card Organization Names' csv file has '%s' listed in the 'Type' column. Please only use either 'Hospital' or 'BirthCenter' in this column.", 
                 levels(submitters$TYPE)[which(!(levels(submitters$TYPE) %in% c("Hospital", "BirthCenter")))])) }
+}
+
+# If user has entered something other than "H" or "BC" for 
+# report_type and is not running the summary report, stop the
+# file and report an error
+if (report_type != "H" & report_type != "BC" & !exists("summary_report")) {
+  stop(sprintf("You entered '%s' for the report_type variable. Please change the value for this variable to either 'H' to run reports for hospitals or 'BC' to run reports for birthcenters.",
+               report_type))
 }
 
 # Stop report if user has identified BC as the type of report, has requested
