@@ -26,7 +26,8 @@ messages <- messages[!is.na(messages$Message),]
 col_check(sample_data_path, "sample")
 
 # read in sample data and reformat COLLECTIONDATE and BIRTHDATE as dates
-initial_dd_prep <- read_data(sample_data_path, "sample", "COLLECTIONDATE", "RECEIVEDATE", "BIRTHDATE")
+initial_dd_prep <- read_data(sample_data_path, "sample", "COLLECTIONDATE", 
+                             "RECEIVEDATE", "BIRTHDATE")
 
 # Check that range of filt_col column dates overlaps the requested start and end date
 date_comp_check(initial_dd_prep, "sample")
@@ -134,7 +135,8 @@ if (exists("summary_report") | report_type == "BC") {
     # Create state metrics based on ALL SAMPLES
     state_bc <- get_state_metrics_over_samples(dd, transfused=TRUE)
     
-    # Get summary statistics for state for each period for use in birthcenter plots across ALL SAMPLES
+    # Get summary statistics for state for each period for use in birthcenter plots 
+    # across ALL SAMPLES
     state_plot_bc <- year_dd %>%
       group_by(PERIOD) %>%
       dplyr::summarise(
