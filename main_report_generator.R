@@ -103,7 +103,7 @@ if (exists("summary_report") | report_type == "H") {
     tot_sub_h <-  nrow(org_metrics_h)
     
     # create metrics for state
-    state_h <- get_state_metrics_over_orgs(org_metrics_h, transfused=TRUE)
+    state_h <- get_state_metrics_over_orgs(org_metrics_h, tot_sub_h, transfused=TRUE)
     
     # Stop report if there is no data for hospitals and the user is trying to 
     # generate report cards for hospitals
