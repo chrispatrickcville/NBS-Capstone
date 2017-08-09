@@ -34,7 +34,7 @@ diag_extend_wid <- ncol(diag_extend)
 ####
 
 # read in diagnosis data
-initial_dd_diag <- read_data(diag_data_path, "DIAGNOSISDATE")
+initial_dd_diag <- read_data(diag_data_path, "diagnosis", "DIAGNOSISDATE")
 
 # check that range of DIAGNSOSISDATE dates overlaps the requested start and end date
 date_comp_check(initial_dd_diag, "diagnosis")
@@ -46,14 +46,14 @@ dd_diag <- as.data.frame(temp_dd_diag[1])
 # if dd_diag has any rows, find the disorder name for each diagnosis in the data
 if (nrow(dd_diag) > 0) {
   for (i in 1:nrow(dd_diag)) {
-   loc = which(diag_extend[,c(6:diag_extend_wid)]==dd_diag$DIAGNOSIS[i])
-   if (length(loc) == 0) {
-     loc = NA
-     dd_diag$DISORDER[i] <- NA
-   } else {
-     num_row = ifelse(loc %% diag_extend_len != 0, loc %% diag_extend_len, diag_extend_len)
-     dd_diag$DISORDER[i] <- diag_extend[num_row, 1]
-   }
+    loc = which(diag_extend[,c(6:diag_extend_wid)]==dd_diag$DIAGNOSIS[i])
+    if (length(loc) == 0) {
+      loc = NA
+      dd_diag$DISORDER[i] <- NA
+    } else {
+      num_row = ifelse(loc %% diag_extend_len != 0, loc %% diag_extend_len, diag_extend_len)
+      dd_diag$DISORDER[i] <- diag_extend[num_row, 1]
+    }
   }
 }
 
