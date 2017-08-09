@@ -12,6 +12,14 @@ This report is a summary of disorders affecting babies born at your facility. Th
 Diagnosis Date Range: `r dates`
 \end{center}
 
+```{r, echo=FALSE, message=FALSE}
+# Subset dataframe
+diag_sub = as.data.frame(diagnoses[diagnoses$SUBMITTERNAME == submitter, 2:4])
+      
+# Change spacing for last row
+diag_sub$Description[nrow(diag_sub)] <- gsub("\\\\\\n", "", diag_sub$Description[nrow(diag_sub)])
+```
+
 ```{r, echo=FALSE, results='asis', message=FALSE}
 panderOptions('keep.line.breaks', TRUE)
 
