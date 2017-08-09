@@ -47,7 +47,7 @@ create_summary_report <- function(org_df, diagnosis_df, type) {
                 type, type, type))
     
   } else {
-  
+    
     # create vector for IDs for organizations of interest
     IDs = c()
     
@@ -56,7 +56,7 @@ create_summary_report <- function(org_df, diagnosis_df, type) {
       IDs[i] <- paste(submitters[submitters$HOSPITALREPORT 
                                  %in% org_df$SUBMITTERNAME[i],]$SUBMITTERID, collapse="; ")
     }
-
+    
     # reorganize columns for report
     org_summary = org_df[,c(1:3,15,4:7,16,8:10,17,11:12,18,13:14,19:32)]
     
@@ -72,7 +72,7 @@ create_summary_report <- function(org_df, diagnosis_df, type) {
         group_by(SUBMITTERNAME) %>%
         dplyr::summarise(
           total=sum(Count))
-    
+      
       # add diagnosis count to hosp_summary
       org_summary = left_join(org_summary, diag_count, by="SUBMITTERNAME")
       
@@ -82,13 +82,13 @@ create_summary_report <- function(org_df, diagnosis_df, type) {
     
     # Rename columns
     org_summary_cols = c("Submitter IDs", "Submitter Name", "Sample Count", "Avg. Transit Time", "Rank: Transit Time",
-                          "Min. Transit Time", "Max. Transit Time", "Received within 2 Days", 
-                          "% Received within 2 Days","Rank: Received within 2 Days",
-                          "Met 95% of Samples Received within 2 Days Goal?", "< 24 Hours", 
-                          "% < 24 Hours", "Rank: < 24 Hours", "Transfused", "% Transfused", 
-                          "Rank: Transfused", "Unsat Count", "Unsat %", "Rank: Unsats", 
-                          paste("Unsat:", unlist(as.list(as.character(unsats$description), sorted = FALSE))),
-                          "Diagnosis Count")
+                         "Min. Transit Time", "Max. Transit Time", "Received within 2 Days", 
+                         "% Received within 2 Days","Rank: Received within 2 Days",
+                         "Met 95% of Samples Received within 2 Days Goal?", "< 24 Hours", 
+                         "% < 24 Hours", "Rank: < 24 Hours", "Transfused", "% Transfused", 
+                         "Rank: Transfused", "Unsat Count", "Unsat %", "Rank: Unsats", 
+                         paste("Unsat:", unlist(as.list(as.character(unsats$description), sorted = FALSE))),
+                         "Diagnosis Count")
     names(org_summary) = org_summary_cols
     
     # Replace NAs with 0s
@@ -125,7 +125,7 @@ if (nrow(dd_diag_narr) == 0) {
   cat("\nWARNING: A summary report for diagnosis counts cannot be created, as\nthere are no diagnoses for the time period of interest.\n")
   
 } else {
-
+  
   # Get all unique disorder/patient combinations for period of interest
   diag_all <- dd_diag_narr %>%
     group_by(DISORDER, LINKID) %>%
@@ -164,9 +164,9 @@ if (!exists("state_h")) {
   
   state_summary <- data.frame(matrix(rep(NA, 28), nrow=1, ncol=28))
   state_h_samp <- data.frame(matrix(rep(NA, 28), nrow=1, ncol=28))
-
+  
 } else {
-
+  
   # Prep Column 1: HOSPITALS ONLY: Averaged over *hospitals*
   
   state_summary <- state_h
@@ -185,7 +185,7 @@ if (!exists("state_h")) {
   # Add additional columns
   state_h_samp <- cbind(tot_sub_h, state_h_samp[1:6], state_summary[8:9], 
                         state_h_samp[7:12], state_h_unsats)
-
+  
 }
 
 ### BirthCenter Stats: columns 3 and 4 ###
@@ -199,9 +199,9 @@ if (!exists("state_bc")) {
   state_bc_samp <- data.frame(matrix(rep(NA, 28), nrow=1, ncol=28))
   
 } else {
-
+  
   # Prep Column 3: BIRTHCENTERS ONLY: Averaged over *birthcenters*
-  state_bc_org <- get_state_metrics_over_orgs(org_metrics_bc, transfused=FALSE)
+  state_bc_org <- get_state_metrics_over_orgs(org_metrics_bc, nrow(org_metrics_bc), transfused=FALSE)
   
   # find counts of each unsat category for birthcenter submitters
   state_bc_unsats <- as.data.frame(org_metrics_birthcenter[2], check.names=FALSE) %>%
@@ -217,11 +217,11 @@ if (!exists("state_bc")) {
   # Add additional columns
   state_bc_samp <- cbind(state_bc_org[1], state_bc_samp[1:6], state_bc_org[8:9], state_bc_samp[7:8], NA, NA, 
                          state_bc_samp[9:10], state_bc_unsats)
-
+  
 }
 
 ### Stats for All Submitters: columns 5 and 6 ###
-  
+
 # Prep Column 5: ALL SUBMITTERS: Averaged over *submitters*
 
 # remove from dd any records missing SUBMITTERID
@@ -253,7 +253,7 @@ all_sub_metrics <- rbind(all_sub_metrics, if(exists("org_metrics_h")) org_metric
                          if(exists("org_metrics_bc")) org_metrics_bc)
 
 # Get state averages across all submitters (hospital, birthcenter, and others)
-state_all_sub <- get_state_metrics_over_orgs(all_sub_metrics, transfused=TRUE)
+state_all_sub <- get_state_metrics_over_orgs(all_sub_metrics, nrow(all_sub_metrics), transfused=TRUE)
 
 # Get counts of unsats by category for all submitters
 unsat_all_counts <- data.frame(t(colSums(all_sub_metrics[, as.character(unsats$description)], na.rm=TRUE)), 
