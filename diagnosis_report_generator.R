@@ -1,11 +1,3 @@
-# If user has entered something other than "H" or "BC" for 
-# report_type and is not running the summary report, stop the
-# file and report an error
-if (report_type != "H" & report_type != "BC" & !exists("summary_report")) {
-  stop(sprintf("You entered '%s' for the report_type variable. Please change the value for this variable to either 'H' to run reports for hospitals or 'BC' to run reports for birthcenters.",
-               report_type))
-}
-
 # Source load_packages file
 load_packages <- paste0(wd, slash, "load_packages_and_functions.R")
 source(load_packages)
@@ -13,8 +5,8 @@ source(load_packages)
 # Source diagnosis_prep.R for initial preparation of dataset
 source(paste0(wd, slash, "diagnosis_prep.R"))
 
-# If report_type is "H" (hospital) OR if the summary_report variable exists (indicating we are running
-# a summary report), run the hospital code below
+# If report_type is "H" (hospital) OR if the summary_report variable exists 
+# (indicating we are running a summary report), run the hospital code below
 
 if (exists("summary_report") | report_type == "H") {
   
