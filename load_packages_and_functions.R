@@ -47,6 +47,10 @@ if (exists("start_date")) {
   }
 }
 
+# Convert start and end date for use in file titles
+start_date_file <- gsub("/", "-", start_date)
+end_date_file <- gsub("/", "-", end_date)
+
 stopQuietly <- function(...) {
   
   # Stops a source file quietly (without printing an error message), used in cases
@@ -397,6 +401,120 @@ read_data <- function(folder, data_type, ...) {
   
 }
 
+report_and_repair_differences <- function(df, id, data_type) {
+  
+  # Given a dataframe and an ID column, identify all duplicated
+  # IDs as well as any columns for those IDs that have 
+  # differing values.
+  
+  # Generates a warning if such samples exist, creates
+  # an ancillary report listing them, and changes the values
+  # for columns with differing values to NAs.
+  
+  # Identify set of columns we want to evaluate for
+  # duplicates and obtain SAMPLEIDs with duplicates. This 
+  # differs for sample and diagnosis data. For diagnosis data, 
+  # we only want cases where there are differing values for 
+  # DIAGNOSISDATE for the same sample ID (when everything else
+  # about the sample is the same)
+  if (data_type == "sample") {
+    cols = colnames(df)[!colnames(df) %in% c("SAMPLEID", "SUBMITTERNAME", "SUBMITTERID", 
+                                             "HOSPTIALREPORT", "TYPE")]
+    eval_cols = NULL
+    col_text = "at\nleast one column"
+  } else if (data_type == "diagnosis") {
+    cols = "DIAGNOSISDATE"
+    eval_cols = c("DIAGNOSIS", "SUBMITTERID", "LINKID")
+    col_text = "the\nDIAGNOSISDATE column"
+  }
+  
+  # Get ids that are duplicated in the columns of interest
+  # (by subsetting on the columns not of interest and finding
+  # the ids for any duplicates in this set
+  df_sub = subset(df, select=!colnames(df) %in% cols)
+  dupes = df[, id][duplicated(df_sub)]
+  
+  # If dupes is empty, return df
+  if (length(dupes) == 0) {
+    
+    return(df)
+    
+  } else {
+    
+    # Subset data for observations with IDs that appear in dupes
+    df_dupes = df[df[, id] %in% dupes, ]
+    
+    # Remove this duplicated data from df
+    df_red <- anti_join(df, df_dupes, by=id)
+    
+    # Report out columns with duplicated data - currentlty
+    # not reported out, but we may want to. This would also
+    # need to be altered to give accurate info for diagnoses.
+    # bad_cols = ""
+    # for (column in colnames(df_dupes)) {
+    #   temp = df_dupes[, c(id, column)]
+    #   temp = unique(temp)
+    #   differences = nrow(temp) - length(dupes)
+    #   if (differences != 0) {
+    #     bad_cols = paste0(bad_cols, column, ": ", differences, "\n")
+    #   }
+    # }
+    
+    # Get list of columns with different values by sample, also 
+    # set any differing values to NA
+    DIFFERING_COLUMNS = c()
+    
+    for (s in dupes) {
+      temp = df_dupes[df_dupes[, id]==s, ]
+      bad_cols = c()
+      for (column in cols) {
+        temp_red = temp[, c(column, eval_cols)]
+        temp_red = unique(temp_red)
+        if (length(temp_red) != 1) {
+          bad_cols = c(bad_cols, column)
+          df_dupes[df_dupes[, id]==s, column] <- NA
+        }
+      }
+      
+      bad_cols = paste(bad_cols, collapse=", ")
+      DIFFERING_COLUMNS = c(DIFFERING_COLUMNS, bad_cols)
+      
+    }
+    
+    bad_df = data.frame(cbind(dupes, DIFFERING_COLUMNS))
+    names(bad_df)[names(bad_df)=="dupes"] <- id
+    
+    # Write results to csv
+    write.csv(bad_df, paste0(admin_path, slash, start_date_file, "_", end_date_file, "_Report Card_", id, 
+                             "s duplicated in ", data_type, " data.csv"), row.names=FALSE)
+    
+    # Reduce df_dupes to unique values (now that NAs have overwritten
+    # differing records)
+    df_dupes = unique(df_dupes)
+    
+    # Join df_dupes back to df_red
+    df <- rbind(df_red, df_dupes)
+    
+    # Plural for message if bad_df has more than one row
+    plural <- ifelse(nrow(bad_df) == 1, "", "s")
+    verb <- ifelse(nrow(bad_df) == 1, "is", "are")
+    adj <- ifelse(nrow(bad_df) == 1, "this", "these")
+    
+    # Report out issue
+    message <- paste0("\nWARNING: ", length(dupes), " ", id, plural, " ", verb, 
+                      " listed more than once in the ", data_type, " data, which\nis caused by ", adj, " sample", plural, 
+                      " being associated with different values in ", col_text, 
+                      ". Information on ", adj, " sample", plural, " and the problematic column(s)\nis in your output folder in the '", 
+                      id, "s duplicated in ", data_type, " data' csv file. Also,\nany differing values have been overwritten with NA values and the duplicates\nhave been removed (although they still exist in the source data).\n")
+    
+    cat(message)
+    
+    # Return df
+    return(df)
+    
+  }
+}
+
 create_filt_dfs <- function(df, type=c("sample","diagnosis"), s_date=start_date, e_date=end_date, period=line_chart) {
   
   # Given a dataframe, start date, and end date, returns 2 data frames filtered by
@@ -408,12 +526,6 @@ create_filt_dfs <- function(df, type=c("sample","diagnosis"), s_date=start_date,
   # Define column that will be used to filter data
   filt_col <- ifelse(type == "sample", filt_col, "DIAGNOSISDATE")
   
-  # Obtain first dataframe, filtering data by start_date and end_date
-  period_df <- df %>%
-    filter_(interp(~ as.Date(filt_col, format="%m/%d/%Y") >= s_date
-                   & as.Date(filt_col, format="%m/%d/%Y") <= e_date,
-                   filt_col=as.name(filt_col)))
-  
   # Determine end date for period, depending on whether line_plot
   # is defined as "monthly" or "quarterly"
   period_end <- as.Date(ifelse(period == "quarterly", as.Date(as.yearqtr(e_date), frac=1), 
@@ -424,6 +536,22 @@ create_filt_dfs <- function(df, type=c("sample","diagnosis"), s_date=start_date,
     filter_(interp(~ as.Date(filt_col, format="%m/%d/%Y") > (period_end - years(1)) 
                    & as.Date(filt_col, format="%m/%d/%Y") <= period_end,
                    filt_col=as.name(filt_col)))
+  
+  # Report and repair differences in duplicated SAMPLEIDs (if type=="sample")
+  if (type=="sample") {
+    year_df <- report_and_repair_differences(year_df, "SAMPLEID", type)
+  }
+  
+  # Filter year_df by start_date and end_date
+  period_df <- year_df %>%
+    filter_(interp(~ as.Date(filt_col, format="%m/%d/%Y") >= s_date
+                   & as.Date(filt_col, format="%m/%d/%Y") <= e_date,
+                   filt_col=as.name(filt_col)))
+  
+  # Report and repair differences in duplicated SAMPLEIDs (if type=="diagnosis")
+  if (type=="diagnosis") {
+    period_df <- report_and_repair_differences(period_df, "SAMPLEID", type)
+  }
   
   # Add period information to year dataframe if type == "sample"
   if(type == "sample") {
