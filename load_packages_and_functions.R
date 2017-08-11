@@ -31,8 +31,13 @@ for (l in libs) {
 
 # Reformat start date and end date as dates
 if (exists("start_date")) {
+  
   start_date <- as.Date(start_date, "%m/%d/%Y")
   end_date <- as.Date(end_date, "%m/%d/%Y")
+  
+  # Convert start and end date for use in file titles
+  start_date_file <- gsub("/", "-", start_date)
+  end_date_file <- gsub("/", "-", end_date)
   
   if (is.na(start_date)) {
     message = "Your start date is invalid. Please enter a valid start date."
@@ -47,10 +52,6 @@ if (exists("start_date")) {
   }
 }
 
-# Convert start and end date for use in file titles
-start_date_file <- gsub("/", "-", start_date)
-end_date_file <- gsub("/", "-", end_date)
-
 stopQuietly <- function(...) {
   
   # Stops a source file quietly (without printing an error message), used in cases
@@ -62,6 +63,13 @@ stopQuietly <- function(...) {
   stop(simpleError(blankMsg));
   
 } 
+
+trim <- function (x) {
+  
+  # Remove spaces at the end or the beginning of any elements
+  gsub("^\\s+|\\s+$", "", x)
+  
+}
 
 check_inf <- function(FUN) {
   
@@ -144,8 +152,8 @@ date_repair <- function(df, ...) {
 
 # Identify columns we need to have for sample data
 sample_cols = c("SAMPLEID", "BIRTHDATE", "BIRTHTIME", "COLLECTIONDATE", 
-                "COLLECTIONTIME", "RECEIVEDATE", "TRANSIT_TIME", "TRANSFUSED", "SUBMITTERID", 
-                "SUBMITTERNAME", "UNSATCODE", "CATEGORY")
+         "COLLECTIONTIME", "RECEIVEDATE", "TRANSIT_TIME", "TRANSFUSED", "SUBMITTERID", 
+         "SUBMITTERNAME", "UNSATCODE", "CATEGORY")
 
 # Identify columns we need for diagnosis data
 diagnosis_cols <- c("SAMPLEID", "DIAGNOSIS", "DIAGNOSISDATE", "SUBMITTERID", "LINKID")
@@ -176,7 +184,7 @@ col_check <- function(folder, type) {
     temp_file = suppressWarnings(read.table(f, nrows = 1, header = TRUE, sep=separator, 
                                             fill = TRUE))
     # Strip odd characters from column names
-    colnames(temp_file) <- gsub("ï..", "", colnames(temp_file))
+    colnames(temp_file) <- gsub("?..", "", colnames(temp_file))
     # Find set difference between expected columns and columns in temp_file
     bf_temp = setdiff(cols, colnames(temp_file))
     if (length(bf_temp) != 0) {
@@ -298,7 +306,7 @@ date_comp_check <- function(df, data_type) {
     
     # Check that latest date for filt_col in data is later than requested end_date
     date_compare(data_type, "end", date_test)
-    
+  
   } else {
     
     # Otherwise, test that there is one year of data for supporting the
@@ -358,7 +366,7 @@ read_data <- function(folder, data_type, ...) {
   initial_dd <- data.frame(initial_dd)
   
   # Strip odd characters from column names
-  colnames(initial_dd) <- gsub("ï..", "", colnames(initial_dd))
+  colnames(initial_dd) <- gsub("?..", "", colnames(initial_dd))
   
   # Remove unneeded columns
   if (data_type == "sample") {
@@ -794,9 +802,50 @@ requestEmail <- function() {
 
 # Read in submitter names as we wish them to appear in the report
 temp <- paste(codes_path, slash, "VA NBS Report Card Organization Names.csv", sep="")
-submitters <- as.data.frame(read.csv(temp, sep=","))
+submitters <- as.data.frame(read.csv(temp, sep=",", stringsAsFactors = FALSE))
+submitters <- submitters[, c("submitterCode", "Name", "Type")]
 names(submitters) <- c("SUBMITTERID","HOSPITALREPORT","TYPE")
-submitters$SUBMITTERID <- as.character(submitters$SUBMITTERID)
+
+# Test for IDs assigned to multiple organizations in submitters
+IDs <- trim(unlist(strsplit(submitters$SUBMITTERID, ";")))
+ID_test <- IDs[duplicated(IDs)]
+
+# Stop report if duplicate IDs are discovered
+if (length(ID_test) != 0){
+  e_begin <- ifelse(length(ID_test) == 1, "One ID", "Several IDs")
+  e_verb <- ifelse(length(ID_test) == 1, "is", "are")
+  e_messages <- ""
+  for (id in ID_test) {
+    temp_hosps <- submitters$HOSPITALREPORT[grepl(id, submitters$SUBMITTERID)]
+    test_hs <- paste0("\nHOSPITALS:     ", paste(temp_hosps, collapse=", "), "\n")
+    test_ids <- paste0("DUPLICATED ID: ", id, "\n")
+    e_messages <- paste0(e_messages, paste0(test_hs, test_ids))
+  }
+  {stop(sprintf("%s in 'VA NBS Report Card Organization Names' %s assigned to more than one hospital:\n%s\nPlease correct in 'VA NBS Report Card Organization Names' before running reports.", 
+                e_begin, e_verb, e_messages)) }
+}
+
+# Create a new dataframe to store the 'exploded' data
+submitters_rev <- submitters[0, ]
+
+# Get the HOSPITALREPORT and TYPE for each individual ID
+for (id in IDs) {
+  vec <- data.frame(t(c(id, 
+                        submitters$HOSPITALREPORT[grepl(id, submitters$SUBMITTERID)], 
+                        submitters$TYPE[grepl(id, submitters$SUBMITTERID)]
+  )))
+  names(vec) <- names(submitters_rev)
+  submitters_rev <- rbind(submitters_rev, vec)
+}
+
+# Replace submitters with submitters_rev
+submitters <- submitters_rev
+rm(submitters_rev)
+
+# Change submitters to character
+for (n in colnames(submitters)) {
+  submitters[, n] <- as.character(submitters[, n])
+}
 
 # Stop report if all values in TYPE are not "Hospital" or "BirthCenter"
 if (!all(levels(submitters$TYPE) %in% c("Hospital", "BirthCenter"))) {
@@ -806,35 +855,20 @@ if (!all(levels(submitters$TYPE) %in% c("Hospital", "BirthCenter"))) {
 }
 
 # If user has entered something other than "H" or "BC" for 
-# report_type and is not running the summary report, stop the
-# file and report an error
-if (report_type != "H" & report_type != "BC" & !exists("summary_report")) {
-  stop(sprintf("You entered '%s' for the report_type variable. Please change the value for this variable to either 'H' to run reports for hospitals or 'BC' to run reports for birthcenters.",
-               report_type))
+# report_type and is not running the summary report or running email, 
+# stop the file and report an error
+if (!exists("email_var") & !exists("summary_report")) {
+  if (report_type != "H" & report_type != "BC") {
+    stop(sprintf("You entered '%s' for the report_type variable. Please change the value for this variable to either 'H' to run reports for hospitals or 'BC' to run reports for birthcenters.",
+                 report_type))
+  }
 }
 
 # Stop report if user has identified BC as the type of report, has requested
 # that report cards or diagnoses be run, and has not identified any birthcenters in the
 # VA NBS file
-if (!exists("summary_report") & report_type == "BC" & !"BirthCenter" %in% submitters$TYPE) {
-  {stop(sprintf("You have requested that reports for birth centers be generated, but there\nare no birth centers identified in the 'VA NBS Report Card Organization Names'\ncsv file. Please enter one or more birth centers in this file if you wish to\ncreate reports for these organizations."))}
-}
-
-# Test for IDs assigned to multiple organizations in submitters
-ID_test <- submitters[(duplicated(submitters$SUBMITTERID) | duplicated(submitters$SUBMITTERID, 
-                                                                       fromLast=TRUE)),]
-
-# Stop report if duplicate IDs are discovered
-if (nrow(ID_test) != 0){
-  e_begin <- ifelse(length(unique(ID_test$SUBMITTERID)) == 1, "One ID", "Several IDs")
-  e_verb <- ifelse(length(unique(ID_test$SUBMITTERID)) == 1, "is", "are")
-  e_messages <- ""
-  for (id in unique(ID_test$SUBMITTERID)) {
-    temp_hosps <- ID_test$HOSPITALREPORT[ID_test$SUBMITTERID == id]
-    test_hs <- paste0("\nHOSPITALS:     ", paste(temp_hosps, collapse=", "), "\n")
-    test_ids <- paste0("DUPLICATED ID: ", id, "\n")
-    e_messages <- paste0(e_messages, paste0(test_hs, test_ids))
+if (!exists("email_var") & !exists("summary_report")) {
+  if (report_type == "BC" & !"BirthCenter" %in% submitters$TYPE) {
+    {stop(sprintf("You have requested that reports for birth centers be generated, but there\nare no birth centers identified in the 'VA NBS Report Card Organization Names'\ncsv file. Please enter one or more birth centers in this file if you wish to\ncreate reports for these organizations."))}
   }
-  {stop(sprintf("%s in 'VA NBS Report Card Organization Names' %s assigned to more than one hospital:\n%s\nPlease correct in 'VA NBS Report Card Organization Names' before running reports.", 
-                e_begin, e_verb, e_messages)) }
 }
