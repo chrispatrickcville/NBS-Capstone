@@ -1,3 +1,6 @@
+# Set email_var to TRUE to indicate we are running emails
+email_var <- TRUE
+
 # LOAD PACKAGES AND FUNCTIONS
 load_packages <- paste0(wd, slash, "load_packages_and_functions.R")
 source(load_packages)
@@ -10,26 +13,22 @@ if (send_to != "H" & send_to != "BC") {
 }
 
 # load in email addresses
-emails <- read.csv(paste(codes_path, slash, "organization_emails.csv", sep=""), 
+emails <- read.csv(paste(codes_path, slash, "VA NBS Report Card Organization Names.csv", sep=""), 
                    stringsAsFactors=FALSE, header=TRUE)
 
-# get unique submitters from submitters dataframe
-sub_unique <- unique(submitters[, 2:3])
-
-# get type for each organization in hospital_emails
-emails <- suppressWarnings(left_join(emails, sub_unique, c("Name" = "HOSPITALREPORT")))
+# select columns we want
+emails <- emails[, c("Name", "Type", "Email")]
 
 # select addresses of interest depending on whether user has entered
 # 'H' or 'BC' for the send_to variable, also set path for location reports
 # for sending
 if (send_to == "H") {
-  emails <- emails[emails$TYPE == "Hospital", ]
+  emails <- emails[emails$Type == "Hospital", ]
   path <- hospital_path
 } else {
-  emails <- emails[emails$TYPE == "BirthCenter", ]
+  emails <- emails[emails$Type == "BirthCenter", ]
   path <- center_path
 }
-
 
 # remove rows with no email addresses
 emails <- emails[emails$Email != "",]
@@ -84,5 +83,5 @@ for (i in 1:email_end) {
   }
 }
 
-# Remove user's email address and password from environment
-rm(emailInfo)
+# Remove user's email address and password and email_var from environment
+rm(emailInfo, email_var)
