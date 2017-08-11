@@ -19,8 +19,8 @@ source(load_packages)
 unsats <- read.csv(paste(codes_path, slash, "unsat_codes.csv", sep=""))
 
 # read in individual messages to hospitals to be included in report
-messages <- read.csv(paste(codes_path, slash, "organization_messages.csv", sep=""), stringsAsFactors = FALSE)
-messages <- messages[!is.na(messages$Message),]
+messages <- read.csv(paste(codes_path, slash, "VA NBS Report Card Organization Names.csv", sep=""), stringsAsFactors = FALSE)
+messages <- messages[!is.na(messages$Message) & messages$Message != "", c("Name", "Message")]
 
 # Check for correct columns
 col_check(sample_data_path, "sample")
