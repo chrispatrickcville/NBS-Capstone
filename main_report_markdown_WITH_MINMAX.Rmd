@@ -32,6 +32,7 @@ title2 = "Percentage of Unsatisfactory Samples\nReceived (Requiring Repeat Colle
 | &nbsp;&nbsp;&nbsp;&nbsp;Maximum transit time | `r o$max_transit_time` days |  |  |  |
 | **Samples received within 2 days of** |  |  |  |  | 
 | **&nbsp;&nbsp;&nbsp;&nbsp;collection (GOAL: 95%)** | `r format(o$rec_in_2_days, big.mark=",", trim=TRUE)` | `r o$percent_rec_in_2_days`% | `r toOrdinal(o$rank_percent_within_goal)` of `r state$submitters` | `r state$percent_rec_in_2_days`% |
+| **Samples 4 or more days in transit** | `r format(o$transit_over_4, big.mark=",", trim=TRUE)` | `r o$percent_over_4`% | `r toOrdinal(o$rank_transit_over_4)` of `r state$submitters` | `r state$percent_over_4`% |
 | **Samples collected at < 24 hours of age** | `r o$col_less_than_24_hours` | `r o$percent_less_than_24_hours`% | `r toOrdinal(o$rank_early_collection)` of `r state$submitters` | `r state$percent_less_than_24_hours`%
 | **Samples transfused prior to collection** |  `r o$trans` | `r o$trans_percent`% |  `r toOrdinal(o$rank_transfused)` of `r state$submitters`  |  `r state$trans_percent`% |
 | **Unsatisfactory samples** | `r o$unsat_count` |  `r o$unsat_percent`% | `r toOrdinal(o$rank_unsats)` of `r state$submitters`  | `r state$unsat_percent`% |

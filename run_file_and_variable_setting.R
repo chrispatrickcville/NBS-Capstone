@@ -10,7 +10,7 @@ comp_type <- 'MAC'
 # SET WORKING DIRECTORY
 # This should be where you have all of your R code files stored
 
-wd <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/r_files/report_card"
+wd <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/FINAL DELIVERABLES (and other code)/r_files/report_card"
 
 #########
 
@@ -38,7 +38,6 @@ diag_data_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newbo
 
 # SEPARATOR
 # Enter the separator (e.g., '|' or ',' that is used to separate between fields in your data files).
-# This is not needed if your data files are in Excel.
 
 separator <- "|"
 
@@ -47,15 +46,13 @@ separator <- "|"
 # CODES FILE PATH
 # This should be your directory (e.g., the location on your
 # computer) where you have all supporting csv files. Required
-# at this location are five files:
-#   -- diagnosis_descriptions.csv - narratives for each diagnosis for use in diagnosis reporting
-#   -- hospital_emails.csv - email addresses for each hospital for sending reports
-#   -- hospital_messages.csv - individual messages to hospitals to be included in their reports
+# at this location are three files:
+#   -- diagnosis_narratives.csv - disorder names for diagnoses and narratives to use for each disorder
 #   -- unsat_codes.csv - descriptions for each unsatisfactory code
-#   -- VA NBS Report Card Organization Names.csv - hospital codes and names as we want them to appear
-#             in their reports
+#   -- VA NBS Report Card Organization Names.csv - hospital and birthcenter SUBMITTERIDs, names,
+#      and other needed information for these organizations
 
-codes_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/submitter_and_unsat_codes"
+codes_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/FINAL DELIVERABLES (and other code)/submitter_and_unsat_codes"
 
 #########
 
@@ -63,7 +60,7 @@ codes_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn S
 # Enter the location on your computer where you want the hospital
 # reports to be saved
 
-hospital_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/Hospital output"
+hospital_path <- "/Users/chrispatrick/Desktop/Output"
 
 #########
 
@@ -71,7 +68,7 @@ hospital_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newbor
 # Enter the location on your computer where you want the birth center
 # reports to be saved
 
-center_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/Birthcenter output"
+center_path <- "/Users/chrispatrick/Desktop/Output"
 
 ########
 
@@ -79,7 +76,7 @@ center_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn 
 # Enter the location on your computer where you want administrative
 # reports to be saved
 
-admin_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/Summary output"
+admin_path <- "/Users/chrispatrick/Desktop/Output"
 
 ########
 
@@ -95,7 +92,16 @@ min_max <- "N"
 # Enter 'H' to indicate that you wish to run hospital reports, or 'BC' for
 # birthcenter reports
 
-report_type <- "BC"
+report_type <- "H"
+
+########
+
+# INDICATE WHETHER YOU WISH TO USE RECEIVEDATE OR BIRTHDATE FOR RUNNING SUMMARY REPORTS
+# Enter 'RECEIVEDATE' or 'BIRTHDATE' to indicate the filter you wish to use for running
+# summary reports. Note that report cards always use RECEIVEDATE and this cannot be changed,
+# so summary reports will not align with the report cards if 'BIRTHDATE' is chosen.
+
+summary_filter <- "RECEIVEDATE"
 
 ########
 
@@ -121,7 +127,7 @@ line_chart <- "quarterly"
 # or do you want reports for all submitters? Enter "Y" if you wish to run
 # only a single report, "N" otherwise
 
-test_report <- "N"
+test_report <- "Y"
 
 #########
 
@@ -145,6 +151,9 @@ only_run <- NULL
 # SET FILE SEPARATOR
 slash <- ifelse(comp_type == 'PC', '\\', '/')
 
+# SET LOCATION FOR FUNCTIONS
+lib <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/FINAL DELIVERABLES (and other code)/r_files/lib/"
+
 # GENERATE LIST OF DIAGNOSES IN DATA SET THAT NEED NARRATIVES
 # BEFORE RUNNING DIAGNOSIS REPORTS - THIS WILL OUTPUT A CSV
 # TO THE FOLDER YOU DESIGNATE IN THE admin_path VARIABLE
@@ -152,7 +161,7 @@ slash <- ifelse(comp_type == 'PC', '\\', '/')
 diag_narr_test <- paste0(wd, slash, "diagnosis_narrative_test.R")
 source(diag_narr_test)
 
-# RUN REPORTS FOR HOSPITALS
+# RUN REPORTS FOR HOSPITALS or BIRTHCENTERS
 report_run <- paste0(wd, slash, "main_report_generator.R")
 source(report_run)
 

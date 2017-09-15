@@ -65,6 +65,7 @@ for (i in 1:email_end) {
                           user.name = emailInfo[[1]],           
                           passwd = emailInfo[[2]]),            
               authenticate = TRUE,
+              html = TRUE,
               attach.files = attachments,
               send = TRUE)
     
@@ -78,6 +79,7 @@ for (i in 1:email_end) {
                           port = 25,
                           user.name = emailInfo[[1]]),
               authenticate = FALSE,
+              html = TRUE,
               attach.files = attachments,
               send = TRUE)
   }

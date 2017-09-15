@@ -32,6 +32,7 @@ title2 = "Percentage of Unsatisfactory Samples\nReceived (Requiring Repeat Colle
 | &nbsp;&nbsp;&nbsp;&nbsp;Maximum transit time | `r o$max_transit_time` days |  |  |  |
 | **Samples received within 2 days of** |  |  |  | 
 | **&nbsp;&nbsp;&nbsp;&nbsp;collection (GOAL: 95%)** | `r format(o$rec_in_2_days, big.mark=",", trim=TRUE)` | `r o$percent_rec_in_2_days`% | `r state$percent_rec_in_2_days`% |
+| **Samples 4 or more days in transit** | `r format(o$transit_over_4, big.mark=",", trim=TRUE)` | `r o$percent_over_4`% | `r state$percent_over_4`% |
 | **Samples collected at < 24 hours of age** | `r o$col_less_than_24_hours` | `r o$percent_less_than_24_hours`% | `r state$percent_less_than_24_hours`%
 | **Unsatisfactory samples** | `r o$unsat_count` |  `r o$unsat_percent`% | `r state$unsat_percent`% |
 

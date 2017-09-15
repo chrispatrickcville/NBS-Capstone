@@ -3,6 +3,7 @@ load_packages <- paste0(wd, slash, "load_packages_and_functions.R")
 source(load_packages)
 
 # Source diagnosis_prep.R for initial preparation of dataset
+check_diag = TRUE # Check for missing diagnoses when getDisorders is run
 source(paste0(wd, slash, "diagnosis_prep.R"))
 
 # If report_type is "H" (hospital) OR if the summary_report variable exists 
@@ -10,13 +11,13 @@ source(paste0(wd, slash, "diagnosis_prep.R"))
 
 if (exists("summary_report") | report_type == "H") {
   
-  diagnoses_h <- get_diagnoses(dd_diag_narr, "Hospital")
+  diagnoses_h <- getDiagnoses(dd_diag_narr, "Hospital")
   
 } 
 
 if (exists("summary_report") | report_type == "BC") {
   
-  diagnoses_bc <- get_diagnoses(dd_diag_narr, "BirthCenter")
+  diagnoses_bc <- getDiagnoses(dd_diag_narr, "BirthCenter")
   
 }
 
@@ -72,7 +73,7 @@ if (!exists("summary_report")) {
     } 
     
   } else {
-    cat("There are no diagnoses for the given time period and the organizations of interest.")
+    cat("\nThere are no diagnoses for the given time period and the organizations of interest.")
   }
   
 }

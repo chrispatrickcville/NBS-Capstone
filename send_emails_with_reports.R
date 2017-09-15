@@ -6,15 +6,15 @@
 # email first, and also enter the email address to use for sending the test
 # email.
 
-email_test <- "N"
-test_email_recipient <- ""
+email_test <- "Y"
+test_email_recipient <- "Christopher.Patrick@dgs.virginia.gov"
 
 #########
 
 # CHOOSE WHETHER TO SEND THE EMAIL TO HOSPITALS OR TO BIRTHCENTERS
 # Enter 'H' for hospitals or 'BC' for birthcenters.
 
-send_to <- "BC"
+send_to <- "H"
 
 #########
 
@@ -27,39 +27,45 @@ subject <- "Quarterly Report from DCLS: 10/1/2016 - 12/31/2016"
 
 # EMAIL MESSAGE
 # This will be what appears in the message body.
-# Use '\n' for each carriage return, as in this example:
-#   message <- "Hi,\n\nPlease find attached the new hospital report card from the Division of Consolidated Laboratory Services. If your hospital had any diagnoses for the given period, you will also find a diagnosis report attached.\n\nSincerely,\nDCLS"
+# Use '<br/>' for each carriage return, as in this example:
+#   message <- "Hi,<br/><br/>Please find attached the new hospital report card from the Division of Consolidated Laboratory Services. If your hospital had any diagnoses for the given period, you will also find a diagnosis report attached.<br/><br/>Sincerely,<br/>DCLS"
 
-message <- ""
+# You can use other HTML features as well, such as:
+#     <i>italicized words</i> - for italics
+#     <strong>bolded words</strong> - for bold
+
+message <- paste0("Good afternoon,<br/><br/>Please find your Newborn Screening Hospital Report Card for Quarter 2 of 2017.", 
+                  "<br/><br/>The Virginia Newborn Screening Program has been working to enhance quarterly report card features in an effort to better inform your facility of important newborn screening data we are tracking. A new measurement has been added to the sample table which provides the number of blood spot cards received by the lab after 4 or more days of collection at your facility. This measurement was added because we continue to receive one or more of these ", 
+                  "<i>extremely delayed</i>", " samples from many of our hospitals during a quarter. Please remember that delays in newborn screening can have devastating effects on babies with treatable diseases. These effects include severe mental and intellectual disability, and even death. Our courier system runs Sunday-Friday to assist facilities in getting these critical samples to the laboratory for testing within two days. For more information please contact Annie Colfax at 804-648-4480 ext 186.", 
+                  "<br/><br/>We appreciate your partnership in this life-saving initiative.", 
+                  "<br/><br/>Sincerely,<br/>The Virginia Newborn Screening Timeliness Workgroup")
 
 #########
 
 # SET COMPUTER TYPE
 # Enter 'PC' or 'MAC'
 
-comp_type <- 'MAC'
+comp_type <- 'PC'
 
 #########
 
 # SET WORKING DIRECTORY
 # This should be where you have all of your R code files stored
 
-wd <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/r_files/report_card"
+wd <- "C:\\RProjects\\Capstone\\report_card\\report_card"
 
 #########
 
 # CODES FILE PATH
 # This should be your directory (e.g., the location on your
 # computer) where you have all supporting csv files. Required
-# at this location are five files:
-#   -- diagnosis_descriptions.csv - narratives for each diagnosis for use in diagnosis reporting
-#   -- hospital_emails.csv - email addresses for each hospital for sending reports
-#   -- hospital_messages.csv - individual messages to hospitals to be included in their reports
+# at this location are three files:
+#   -- diagnosis_narratives.csv - disorder names for diagnoses and narratives to use for each disorder
 #   -- unsat_codes.csv - descriptions for each unsatisfactory code
-#   -- VA NBS Report Card Organization Names.csv - hospital codes and names as we want them to appear
-#             in their reports
+#   -- VA NBS Report Card Organization Names.csv - hospital and birthcenter SUBMITTERIDs, names,
+#      and other needed information for these organizations
 
-codes_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/submitter_and_unsat_codes"
+codes_path <- "C:\\RProjects\\Capstone\\report_card\\submitter_and_unsat_codes"
 
 #########
 
@@ -67,7 +73,7 @@ codes_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn S
 # Enter the location on your computer where the reports for sending to
 # hospitals are stored
 
-hospital_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/Hospital output"
+hospital_path <- "C:\\RProjects\\Capstone\\report_card\\generated_reports\\report_cards_hospital"
 
 #########
 
@@ -75,7 +81,7 @@ hospital_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newbor
 # Enter the location on your computer where the reports for sending to
 # birthcenters are stored
 
-center_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn Screening/Caliper/Added birthcenter/Birthcenter output"
+center_path <- "C:\\RProjects\\Capstone\\report_card\\generated_reports\\report_cards_birthcenter"
 
 #########
 
@@ -96,6 +102,9 @@ center_path <- "/Users/chrispatrick/Documents/Classes/Fall 2016/DS 6001/Newborn 
 
 # SET FILE SEPARATOR
 slash <- ifelse(comp_type == 'PC', '\\', '/')
+
+# SET LOCATION FOR FUNCTIONS
+lib <- "C:\\RProjects\\Capstone\\lib\\"
 
 # SEND EMAILS
 send_emails <- paste0(wd, slash, "email_generator.R")
